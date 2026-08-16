@@ -1,16 +1,9 @@
-# Model weights — never commit these to git
+# ADTC model weights and local reports
 model/*.gguf
 model/*.bin
 model/*.safetensors
-
-# macOS
-.DS_Store
-
-# Python
-__pycache__/
-*.pyc
-.venv/
-
-# Local profiler output
+*.partial
 submission.json
 audit.json
+verdict.json
+.DS_Store

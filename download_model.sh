@@ -1,38 +1,30 @@
 #!/usr/bin/env bash
-# Download your model weight file.
-#
-# Rules:
-#   - Must be idempotent (safe to run multiple times).
-#   - Must download without any credentials (public URL only).
-#   - The output path must match `_runtime.model_path` in metadata.json.
-
 set -euo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 MODEL_DIR="$HERE/model"
-MODEL_FILE="$MODEL_DIR/SmolLM2-135M-Instruct-Q4_K_M.gguf"
+MODEL_FILE="$MODEL_DIR/KaroGuard-Q4_K_M.gguf"
+MODEL_URL=https://huggingface.co/kherin/karoguard-adtc-2026-gguf/resolve/main/KaroGuard-Q4_K_M.gguf
+EXPECTED_SHA256=5ea2b969bd067f96fc9a26cdd4ed749e3a4f23b4838fcd6293be243301af6b76
+PARTIAL="$MODEL_FILE.partial"
 
-# ── Replace this URL with your public model weight URL ─────────────────────────
-MODEL_URL="https://huggingface.co/bartowski/SmolLM2-135M-Instruct-GGUF/resolve/main/SmolLM2-135M-Instruct-Q4_K_M.gguf"
-# ───────────────────────────────────────────────────────────────────────────────
+hash_file() {
+  if command -v sha256sum >/dev/null 2>&1; then sha256sum "$1" | awk '{print $1}'
+  elif command -v shasum >/dev/null 2>&1; then shasum -a 256 "$1" | awk '{print $1}'
+  else echo "error: SHA-256 utility is unavailable" >&2; return 1; fi
+}
 
 mkdir -p "$MODEL_DIR"
-
 if [[ -f "$MODEL_FILE" ]]; then
-  echo "model already present at $MODEL_FILE — skipping download"
+  [[ "$(hash_file "$MODEL_FILE")" == "$EXPECTED_SHA256" ]] || { echo "error: existing model hash mismatch" >&2; exit 1; }
+  echo "model already present and verified at $MODEL_FILE"
   exit 0
 fi
-
-echo "downloading $MODEL_URL → $MODEL_FILE (~80 MB)…"
-
-if command -v curl > /dev/null 2>&1; then
-  curl -L --fail --progress-bar -o "$MODEL_FILE.partial" "$MODEL_URL"
-elif command -v wget > /dev/null 2>&1; then
-  wget --show-progress -O "$MODEL_FILE.partial" "$MODEL_URL"
-else
-  echo "error: neither curl nor wget found" >&2
-  exit 1
-fi
-
-mv "$MODEL_FILE.partial" "$MODEL_FILE"
-echo "done: $MODEL_FILE"
+trap 'rm -f "$PARTIAL"' EXIT
+if command -v curl >/dev/null 2>&1; then curl -L --fail --retry 3 --progress-bar -o "$PARTIAL" "$MODEL_URL"
+elif command -v wget >/dev/null 2>&1; then wget --tries=3 --show-progress -O "$PARTIAL" "$MODEL_URL"
+else echo "error: neither curl nor wget found" >&2; exit 1; fi
+[[ "$(hash_file "$PARTIAL")" == "$EXPECTED_SHA256" ]] || { echo "error: downloaded model hash mismatch" >&2; exit 1; }
+mv "$PARTIAL" "$MODEL_FILE"
+trap - EXIT
+echo "downloaded and verified $MODEL_FILE"
