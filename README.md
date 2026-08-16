@@ -11,6 +11,8 @@ It runs locally through llama.cpp after the model is downloaded. It helps organi
 
 The model download is credential-free and the model does not require network access during inference.
 
+The hosted model artifact is available from the public [KaroGuard Hugging Face repository](https://huggingface.co/kherin/karoguard-adtc-2026-gguf). The included `download_model.sh` script downloads that exact artifact and verifies its SHA-256 checksum before use.
+
 ## Model
 
 - Base: Qwen/Qwen3-4B-Instruct-2507
