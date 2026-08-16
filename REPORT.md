@@ -35,6 +35,27 @@ These are model-selection results. The public repository remains self-contained 
 
 The released GGUF was exercised on the development VPS using llama.cpp b10424, one CPU thread and a 1 vCPU Ubuntu environment. The service reported approximately 2.3 GiB peak resident memory during development requests. Cloud candidate comparison recorded approximately 5.97 generation tokens/second for the untuned Q4_K_M baseline. Time-to-first-token and thermal sensor telemetry were not available from this development host.
 
+### Official ADTC profiler smoke test
+
+The official `adtc-profiler` 0.1.0 was installed from commit `ac2e137dca65ea3b09d997774f17dd8907b489fb` and run in participant mode using the Local Testing command from the submission template:
+
+    adtc-profiler run --submission . --mode participant --output submission.json --skip-accuracy
+
+The clean run used `llama-bench` from llama.cpp b10424 with CPU-only inference. The host reported an AMD EPYC-Genoa processor, 3.7 GB RAM, no GPU and Ubuntu 26.04 LTS. The profiler produced the following schema-valid measurements:
+
+| Profiler metric | Result |
+| --- | ---: |
+| Generation throughput | 13.15 tokens/second |
+| First-token latency | 19,413.30 ms |
+| Peak resident memory | 2,542.93 MB |
+| Steady-state resident memory | 2,415.93 MB |
+| Peak virtual memory | 4,756.99 MB |
+| CPU utilization, p99 | 97.0% |
+| Peak core temperature | Not reported by host sensors (`null`) |
+| Profiler throttling flag | `false` |
+
+The profiler identified the GGUF as a `qwen3` model with 4,022,468,096 parameters, a 262,144-token declared context length and a parameter-count match against the 4B claim. The generated report uses schema version 1.1.0, records `measured_on` as `participant_laptop`, seed 42 and profiled repository commit `6bfede4925bd`. Per the template smoke-test command, the accuracy stage was not run and the report therefore contains `"accuracy": []`; the separate held-out quality evidence is reported above.
+
 These development measurements are provided for reproducibility and are not a claim about every target laptop. The evaluator downloads the public GGUF and runs its own offline profiler.
 
 ## Offline operation and release

@@ -1,9 +1,8 @@
-# ADTC model weights and local reports
+# ADTC model weights and evaluator-only reports
 model/*.gguf
 model/*.bin
 model/*.safetensors
 *.partial
-submission.json
 audit.json
 verdict.json
 .DS_Store
