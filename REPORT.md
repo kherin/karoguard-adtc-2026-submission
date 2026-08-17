@@ -2,19 +2,26 @@
 
 ## Problem
 
-Smallholder farmers in Mauritius and cyclone-exposed African and Indian Ocean communities often need actionable crop-protection guidance when connectivity, power and access to specialists are unreliable. KaroGuard is an offline assistant for preparation, post-cyclone observation and cautious recovery planning. It keeps emergency safety, official instructions and uncertainty ahead of crop or equipment protection.
+Smallholder farmers in Mauritius and other cyclone-exposed African and Indian Ocean communities need practical crop-protection and recovery guidance when connectivity, electricity and access to specialists are unreliable. KaroGuard is an offline assistant for farmers, field workers and agricultural extension personnel. It supports pre-cyclone preparation, safe post-cyclone observation and cautious recovery planning for waterlogging, wind damage, salt exposure and crop disease risk.
 
-## Design decisions
+The safety boundary is explicit: human and livestock evacuation, official instructions and electrical/flood hazards take priority over crop or equipment recovery. KaroGuard does not replace emergency services, local authorities or qualified agronomists.
 
-KaroGuard uses Qwen/Qwen3-4B-Instruct-2507 at the pinned revision cdbee75f17c01a7cc42f958dc650907174af0554. The final artifact is a 4B-parameter GGUF Q4_K_M model converted with llama.cpp b10424. Q4_K_M was selected as the best quality-preserving compact artifact after comparing Q4_K_S, Q4_K_M, Q5_K_M, Qwen3-1.7B, Ministral-3-3B, and several QLoRA candidates. The stronger adapters reduced domain accuracy, so the released artifact preserves the base tensors and applies a safety-oriented chat-template policy.
+## Design Decisions
 
-The private data pipeline used 150 reviewed knowledge units and 900 supervised examples in 300 leakage-isolated families. Gemini created candidate examples only; deterministic validation and builder review controlled admission. The final evaluation set was held out from training.
+The starting model is `Qwen/Qwen3-4B-Instruct-2507`, pinned to revision `cdbee75f17c01a7cc42f958dc650907174af0554`. The released artifact is a 4,022,468,096-parameter GGUF using the `Q4_K_M` quantization and llama.cpp b10424.
 
-## African use case and constraints
+The evaluation compared Q4_K_S, Q4_K_M and Q5_K_M quantizations; Qwen3-1.7B and Ministral-3-3B alternatives; and multiple QLoRA adapter candidates. Q4_K_M was selected because it preserved the strongest quality profile within the memory budget. Full-strength and interpolated adapters reduced domain accuracy, so the release preserves the base tensors and applies a safety-oriented chat-template policy instead of shipping a quality-degrading adapter.
 
-The model is designed for Mauritius and transferable tropical cyclone contexts in Rodrigues, Madagascar, Comoros, Seychelles and Mozambique. It assumes limited connectivity, modest CPU hardware, local data privacy and no external retrieval service during inference. English is the only validated language currently declared.
+The data pipeline used 150 reviewed knowledge units and 900 supervised examples in 300 leakage-isolated families. Gemini generated candidate examples only; deterministic schema, citation, duplication and safety checks plus builder review controlled admission. Held-out evaluation data was kept inaccessible to training.
 
-KaroGuard must not encourage entry into floodwater, contact with fallen power lines, unsafe field access, or delaying evacuation. It directs users to current authorities, emergency services, utility operators and qualified agricultural specialists when information is missing or conditions are dangerous.
+## Constraints
+
+- **Hardware:** The target is a four-core Ubuntu laptop with less than 7 GB RAM and no required GPU. The development profiler run used an AMD EPYC-Genoa Ubuntu 26.04 host with no GPU; after the VPS resize, the profiler reported 7.6 GiB available RAM. These are development measurements, not a claim about every target laptop.
+- **Connectivity:** Inference must run from a local GGUF through llama.cpp with no network, cloud API or live retrieval dependency after model download.
+- **Data and privacy:** Source records, rights metadata and held-out cases are separated. The model must remain useful with incomplete local information and must defer to current authorities when conditions are dangerous or facts are missing.
+- **Language:** English is the only language currently validated for the released artifact; additional African-language support requires a separate safety and quality gate.
+
+KaroGuard must not encourage entry into floodwater, contact with fallen power lines, unsafe field access or delaying evacuation. It directs users to current authorities, emergency services, utility operators and qualified agricultural specialists when information is missing or conditions are dangerous.
 
 ## Quality evidence
 
@@ -31,30 +38,28 @@ Internal cloud evaluation of the selected candidate recorded:
 
 These are model-selection results. The public repository remains self-contained and does not depend on the cloud evaluation service.
 
-## Development benchmark
+## Benchmarks
 
-The released GGUF was exercised on the development VPS using llama.cpp b10424, one CPU thread and a 1 vCPU Ubuntu environment. The service reported approximately 2.3 GiB peak resident memory during development requests. Cloud candidate comparison recorded approximately 5.97 generation tokens/second for the untuned Q4_K_M baseline. Time-to-first-token and thermal sensor telemetry were not available from this development host.
+The official `adtc-profiler` 0.1.0 was run in participant mode without `--skip-accuracy`, using CPU-only `llama-bench` from llama.cpp b10424:
 
-### Official ADTC profiler smoke test
+    adtc-profiler run --submission . --mode participant --output submission.json --accuracy-task arc_easy --accuracy-limit 50
 
-The official `adtc-profiler` 0.1.0 was installed from commit `ac2e137dca65ea3b09d997774f17dd8907b489fb` and run in participant mode using the Local Testing command from the submission template:
-
-    adtc-profiler run --submission . --mode participant --output submission.json --skip-accuracy
-
-The clean run used `llama-bench` from llama.cpp b10424 with CPU-only inference. The host reported an AMD EPYC-Genoa processor, 3.7 GB RAM, no GPU and Ubuntu 26.04 LTS. The profiler produced the following schema-valid measurements:
+The completed profiler report recorded:
 
 | Profiler metric | Result |
 | --- | ---: |
-| Generation throughput | 13.15 tokens/second |
-| First-token latency | 19,413.30 ms |
-| Peak resident memory | 2,542.93 MB |
-| Steady-state resident memory | 2,415.93 MB |
-| Peak virtual memory | 4,756.99 MB |
-| CPU utilization, p99 | 97.0% |
+| ARC-Easy accuracy (`acc_norm`) | 0.82 (41/50) |
+| Generation throughput | 8.54 tokens/second |
+| First-token latency | 27,192.09 ms |
+| Prompt / generated tokens | 512 / 128 |
+| Peak resident memory | 2,539.16 MB |
+| Steady-state resident memory | 2,394.67 MB |
+| Peak virtual memory | 4,774.12 MB |
+| CPU utilization, p99 | 53.0% |
 | Peak core temperature | Not reported by host sensors (`null`) |
 | Profiler throttling flag | `false` |
 
-The profiler identified the GGUF as a `qwen3` model with 4,022,468,096 parameters, a 262,144-token declared context length and a parameter-count match against the 4B claim. The generated report uses schema version 1.1.0, records `measured_on` as `participant_laptop`, seed 42 and profiled repository commit `6bfede4925bd`. Per the template smoke-test command, the accuracy stage was not run and the report therefore contains `"accuracy": []`; the separate held-out quality evidence is reported above.
+The host reported an AMD EPYC-Genoa processor, 7.6 GiB RAM, no GPU and Ubuntu 26.04 LTS. The profiler identified the GGUF as `qwen3`, verified the 4B parameter claim, and recorded a declared context length of 262,144 tokens. The ARC-Easy result is a 50-sample participant self-check; it is not the hidden judging score. Separate held-out model-selection evidence is reported above.
 
 These development measurements are provided for reproducibility and are not a claim about every target laptop. The evaluator downloads the public GGUF and runs its own offline profiler.
 
