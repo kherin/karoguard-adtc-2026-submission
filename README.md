@@ -20,6 +20,15 @@ The hosted model artifact is available from the public [KaroGuard Hugging Face r
 - Quantization: GGUF Q4_K_M
 - Artifact SHA-256: 5ea2b969bd067f96fc9a26cdd4ed749e3a4f23b4838fcd6293be243301af6b76
 
+## Submission validation
+
+From a fresh public clone, run the exact ADTC participant smoke test:
+
+    bash download_model.sh
+    adtc-profiler run --submission . --mode participant --output submission.json --skip-accuracy
+
+The committed `submission.json` was regenerated from a clean clone with `adtc-profiler 0.1.0`. It reports `environment.measured_on` as `participant_laptop`, confirms the claimed 4B parameter count, and records no thermal throttling. The model download requires no credentials; after the download, profiling and inference use the local GGUF without network access.
+
 ## Safety
 
 KaroGuard is informational decision support. Follow current official warnings and local authorities. Do not enter floodwater, approach fallen electrical lines, or delay evacuation to protect crops.

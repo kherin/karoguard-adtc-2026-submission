@@ -63,6 +63,30 @@ The host reported an AMD EPYC-Genoa processor, 7.6 GiB RAM, no GPU and Ubuntu 26
 
 These development measurements are provided for reproducibility and are not a claim about every target laptop. The evaluator downloads the public GGUF and runs its own offline profiler.
 
+### Final submission smoke validation
+
+On 22 August 2026, the host-requested participant smoke test was repeated from a fresh public clone. `download_model.sh` fetched the complete 2,497,280,864-byte GGUF without credentials, verified its SHA-256, and produced the model at the exact path declared in `metadata.json`. Running the script a second time verified the existing file and did not download it again.
+
+    adtc-profiler run --submission . --mode participant --output submission.json --skip-accuracy
+
+The schema-valid report committed as `submission.json` records:
+
+| Smoke-validation metric | Result |
+| --- | ---: |
+| Environment marker | `participant_laptop` |
+| Generation throughput | 6.41 tokens/second |
+| First-token latency | 25,430.19 ms |
+| Prompt / generated tokens | 512 / 128 |
+| Peak resident memory | 2,451.91 MB |
+| Steady-state resident memory | 2,396.62 MB |
+| Peak virtual memory | 4,774.11 MB |
+| CPU utilization, p99 | 61.7% |
+| Peak core temperature | Not reported by host sensors (`null`) |
+| Profiler throttling flag | `false` |
+| GGUF parameter claim | Matched (`true`) |
+
+The smoke command intentionally emits an empty `accuracy` array. The separate full accuracy run and held-out model-selection evidence remain documented above.
+
 ## Offline operation and release
 
 download_model.sh retrieves the public GGUF over HTTPS, verifies SHA-256, and stores it at the exact path in metadata.json. Once downloaded, inference uses only the local file and llama.cpp. The model artifact checksum is:
