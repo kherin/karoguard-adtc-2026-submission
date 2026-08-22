@@ -1,8 +1,18 @@
-# ADTC model weights and evaluator-only reports
-model/*.gguf
-model/*.bin
-model/*.safetensors
+# Model weights are downloaded after clone and must never enter Git history.
+*.gguf
+model/
+
+# Incomplete downloads and local runtime artifacts
 *.partial
+
+# Evaluator-only reports
 audit.json
 verdict.json
+
+# Local tooling
+__pycache__/
+*.pyc
+.venv/
+
+# macOS
 .DS_Store
